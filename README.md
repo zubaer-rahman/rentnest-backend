@@ -2,7 +2,7 @@
 
 **Find & List Rental Properties with Ease**
 
-A backend REST API for a rental property marketplace where landlords list properties, tenants submit rental requests, and admins oversee the platform.
+A backend REST API for a rental property marketplace. Landlords list properties, tenants submit rental requests and make payments, admins oversee the platform.
 
 ---
 
@@ -17,37 +17,18 @@ A backend REST API for a rental property marketplace where landlords list proper
 | ORM | Prisma |
 | Auth | JWT |
 | Validation | Zod |
-| Payment | Stripe / SSLCommerz (pluggable) |
+| Payment | Stripe / SSLCommerz |
 
 ---
 
 ## Getting Started
 
-### 1. Clone & Install
-
 ```bash
 git clone <repo-url>
 cd rentnest
 npm install
-```
-
-### 2. Environment Variables
-
-Copy `.env.example` to `.env` and fill in the values:
-
-```bash
-cp .env.example .env
-```
-
-### 3. Database Migration
-
-```bash
+cp .env.example .env   # fill in values
 npx prisma migrate dev
-```
-
-### 4. Run Development Server
-
-```bash
 npm run dev
 ```
 
@@ -61,7 +42,7 @@ npm run dev
 |--------|----------|--------|
 | POST | `/api/auth/register` | Public |
 | POST | `/api/auth/login` | Public |
-| GET | `/api/auth/me` | Any authenticated user |
+| GET | `/api/auth/me` | Authenticated |
 
 ### Properties
 
@@ -69,27 +50,25 @@ npm run dev
 |--------|----------|--------|
 | GET | `/api/properties` | Public |
 | GET | `/api/properties/:id` | Public |
-| POST | `/api/properties` | Landlord |
-| PUT | `/api/properties/:id` | Landlord (owner only) |
-| DELETE | `/api/properties/:id` | Landlord (owner only) |
+| GET | `/api/categories` | Public |
 
-### Categories
+### Landlord
 
 | Method | Endpoint | Access |
 |--------|----------|--------|
-| GET | `/api/categories` | Public |
-| POST | `/api/categories` | Admin |
-| PATCH | `/api/categories/:id` | Admin |
-| DELETE | `/api/categories/:id` | Admin |
+| POST | `/api/landlord/properties` | Landlord |
+| PUT | `/api/landlord/properties/:id` | Landlord |
+| DELETE | `/api/landlord/properties/:id` | Landlord |
+| GET | `/api/landlord/requests` | Landlord |
+| PATCH | `/api/landlord/requests/:id` | Landlord |
 
 ### Rental Requests
 
 | Method | Endpoint | Access |
 |--------|----------|--------|
 | POST | `/api/rentals` | Tenant |
-| GET | `/api/rentals` | Tenant / Landlord |
-| GET | `/api/rentals/:id` | Tenant / Landlord |
-| PATCH | `/api/rentals/:id` | Landlord |
+| GET | `/api/rentals` | Tenant |
+| GET | `/api/rentals/:id` | Tenant |
 
 ### Payments
 
@@ -97,6 +76,7 @@ npm run dev
 |--------|----------|--------|
 | POST | `/api/payments/create` | Tenant |
 | POST | `/api/payments/confirm` | Tenant |
+| POST | `/api/payments/webhook` | Stripe (raw) |
 | GET | `/api/payments` | Tenant |
 | GET | `/api/payments/:id` | Tenant |
 
@@ -122,6 +102,6 @@ npm run dev
 
 | Role | Permissions |
 |------|-------------|
-| **TENANT** | Browse, request rentals, pay, leave reviews |
-| **LANDLORD** | Manage listings, approve/reject requests |
-| **ADMIN** | Full platform oversight, user management |
+| **TENANT** | Browse properties, submit rental requests, pay, leave reviews |
+| **LANDLORD** | Manage listings, approve or reject rental requests |
+| **ADMIN** | Platform oversight, user management, category management |

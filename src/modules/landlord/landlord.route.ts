@@ -9,10 +9,8 @@ import { Role } from '../../../generated/prisma';
 
 const router = express.Router();
 
-// All routes here are for LANDLORD role
 router.use(auth(Role.LANDLORD));
 
-// Properties
 router.post(
   '/properties',
   validateRequest(PropertyValidation.createPropertyValidationSchema),
@@ -27,11 +25,8 @@ router.put(
 
 router.delete('/properties/:id', PropertyController.deleteProperty);
 
-// Rental Requests
-// Assignment specifies GET /api/landlord/requests
 router.get('/requests', RentalController.getMyRentalRequests);
 
-// Assignment specifies PATCH /api/landlord/requests/:id
 router.patch(
   '/requests/:id',
   validateRequest(RentalValidation.updateRentalStatusValidationSchema),

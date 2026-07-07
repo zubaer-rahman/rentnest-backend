@@ -16,7 +16,6 @@ const createRentalRequest = async (tenantId: string, payload: { propertyId: stri
     throw new AppError(httpStatus.BAD_REQUEST, 'Property is not available for rent');
   }
 
-  // Prevent tenant from sending duplicate pending request
   const existingRequest = await prisma.rentalRequest.findFirst({
     where: {
       propertyId: payload.propertyId,
@@ -48,7 +47,7 @@ const getMyRentalRequests = async (userId: string, role: string) => {
       ? { tenantId: userId }
       : { property: { landlordId: userId } };
 
-  const result = await prisma.rentalRequest.findMany({
+  return prisma.rentalRequest.findMany({
     where: whereClause,
     include: {
       property: {
@@ -60,8 +59,6 @@ const getMyRentalRequests = async (userId: string, role: string) => {
     },
     orderBy: { createdAt: 'desc' },
   });
-
-  return result;
 };
 
 const getRentalRequestById = async (id: string, userId: string, role: string) => {
@@ -78,7 +75,6 @@ const getRentalRequestById = async (id: string, userId: string, role: string) =>
     throw new AppError(httpStatus.NOT_FOUND, 'Rental request not found');
   }
 
-  // Ensure only the relevant tenant or landlord can view it
   if (role === 'TENANT' && result.tenantId !== userId) {
     throw new AppError(httpStatus.FORBIDDEN, 'You do not have access to this request');
   }
@@ -108,24 +104,20 @@ const updateRentalRequestStatus = async (
     throw new AppError(httpStatus.BAD_REQUEST, 'Only pending requests can be approved or rejected');
   }
 
-  const result = await prisma.rentalRequest.update({
+  return prisma.rentalRequest.update({
     where: { id },
     data: { status: payload.status },
   });
-
-  return result;
 };
 
 const getAllRentalRequests = async () => {
-  const result = await prisma.rentalRequest.findMany({
+  return prisma.rentalRequest.findMany({
     include: {
       property: true,
       tenant: { select: { id: true, name: true, email: true } },
     },
     orderBy: { createdAt: 'desc' },
   });
-
-  return result;
 };
 
 export const RentalService = {

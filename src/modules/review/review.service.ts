@@ -7,7 +7,6 @@ const createReview = async (
   tenantId: string,
   payload: { propertyId: string; rating: number; comment: string },
 ) => {
-  // Verify a completed/paid rental exists between the tenant and property
   const completedRental = await prisma.rentalRequest.findFirst({
     where: {
       tenantId,
@@ -26,7 +25,6 @@ const createReview = async (
     );
   }
 
-  // Prevent duplicate review for the same property
   const existingReview = await prisma.review.findFirst({
     where: {
       tenantId,
@@ -38,7 +36,7 @@ const createReview = async (
     throw new AppError(httpStatus.CONFLICT, 'You have already reviewed this property');
   }
 
-  const result = await prisma.review.create({
+  return prisma.review.create({
     data: {
       ...payload,
       tenantId,
@@ -48,20 +46,16 @@ const createReview = async (
       tenant: { select: { id: true, name: true } },
     },
   });
-
-  return result;
 };
 
 const getPropertyReviews = async (propertyId: string) => {
-  const result = await prisma.review.findMany({
+  return prisma.review.findMany({
     where: { propertyId },
     include: {
       tenant: { select: { id: true, name: true } },
     },
     orderBy: { createdAt: 'desc' },
   });
-
-  return result;
 };
 
 export const ReviewService = {

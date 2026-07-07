@@ -107,7 +107,7 @@ const updateProperty = async (
   const result = await prisma.property.update({
     where: {
       id,
-      landlordId, // Ensure only the owner can update
+      landlordId,
     },
     data: payload,
   });
@@ -118,7 +118,7 @@ const deleteProperty = async (id: string, landlordId: string) => {
   const result = await prisma.property.delete({
     where: {
       id,
-      landlordId, // Ensure only the owner can delete
+      landlordId,
     },
   });
   return result;

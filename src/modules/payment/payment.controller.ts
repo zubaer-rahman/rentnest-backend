@@ -38,10 +38,8 @@ const getPaymentById = catchAsync(async (req, res) => {
   });
 });
 
-// Stripe sends raw body — must be registered before express.json() in app.ts
 const stripeWebhook = async (req: any, res: any) => {
   const sig = req.headers['stripe-signature'];
-
   let event;
 
   try {
@@ -60,7 +58,6 @@ const stripeWebhook = async (req: any, res: any) => {
     try {
       await PaymentService.handleStripeWebhookSuccess(session.id);
     } catch (err: any) {
-      // Log but don't fail the webhook — Stripe retries on non-2xx
       console.error('Webhook handler error:', err.message);
     }
   }

@@ -14,7 +14,6 @@ router.post(
   ReviewController.createReview,
 );
 
-// Public: anyone can read reviews for a property
 router.get('/property/:propertyId', ReviewController.getPropertyReviews);
 
 export const ReviewRoutes = router;
