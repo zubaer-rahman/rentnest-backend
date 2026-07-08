@@ -21,6 +21,10 @@ const register = async (payload: any) => {
     Number(config.bcrypt_salt_rounds),
   );
 
+  if (!payload.role || payload.role === 'ADMIN') {
+    payload.role = 'TENANT';
+  }
+
   const result = await prisma.user.create({
     data: payload,
   });

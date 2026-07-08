@@ -2,11 +2,12 @@ import httpStatus from 'http-status';
 import AppError from '../../utils/AppError';
 import prisma from '../../lib/prisma';
 import stripe from '../../lib/stripe';
+import config from '../../config';
 import { PaymentStatus, RequestStatus } from '../../../generated/prisma';
 
 const createPayment = async (
   tenantId: string,
-  payload: { rentalRequestId: string; provider: string },
+  payload: { rentalRequestId: string },
 ) => {
   const rentalRequest = await prisma.rentalRequest.findUnique({
     where: { id: payload.rentalRequestId },
@@ -36,44 +37,36 @@ const createPayment = async (
     throw new AppError(httpStatus.CONFLICT, 'Payment has already been completed for this request');
   }
 
-  if (payload.provider === 'STRIPE') {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(rentalRequest.property.rent * 100),
-      currency: 'usd',
-      metadata: {
-        rentalRequestId: payload.rentalRequestId,
-        tenantId,
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Rent for ${rentalRequest.property.title}`,
+          },
+          unit_amount: Math.round(rentalRequest.property.rent * 100),
+        },
+        quantity: 1,
       },
-    });
-
-    const payment = await prisma.payment.create({
-      data: {
-        transactionId: paymentIntent.id,
-        rentalRequestId: payload.rentalRequestId,
-        amount: rentalRequest.property.rent,
-        method: 'ONLINE',
-        provider: 'STRIPE',
-        status: PaymentStatus.PENDING,
-      },
-    });
-
-    return {
-      paymentId: payment.id,
-      transactionId: payment.transactionId,
-      clientSecret: paymentIntent.client_secret,
-      amount: payment.amount,
-      provider: payment.provider,
-      status: payment.status,
-    };
-  }
+    ],
+    mode: 'payment',
+    success_url: `${config.app_url}/api/payments/confirm?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${config.app_url}/api/payments/cancel`,
+    metadata: {
+      rentalRequestId: payload.rentalRequestId,
+      tenantId,
+    },
+  });
 
   const payment = await prisma.payment.create({
     data: {
-      transactionId: `sslcz_${Date.now()}_${rentalRequest.id.slice(0, 8)}`,
+      transactionId: session.id,
       rentalRequestId: payload.rentalRequestId,
       amount: rentalRequest.property.rent,
       method: 'ONLINE',
-      provider: payload.provider,
+      provider: 'STRIPE',
       status: PaymentStatus.PENDING,
     },
   });
@@ -81,19 +74,20 @@ const createPayment = async (
   return {
     paymentId: payment.id,
     transactionId: payment.transactionId,
+    paymentUrl: session.url,
     amount: payment.amount,
     provider: payment.provider,
     status: payment.status,
   };
 };
 
-const handleStripeWebhookSuccess = async (paymentIntentId: string) => {
+const handleStripeWebhookSuccess = async (sessionId: string) => {
   const payment = await prisma.payment.findUnique({
-    where: { transactionId: paymentIntentId },
+    where: { transactionId: sessionId },
   });
 
   if (!payment) {
-    throw new AppError(httpStatus.NOT_FOUND, `No payment record found for PaymentIntent: ${paymentIntentId}`);
+    throw new AppError(httpStatus.NOT_FOUND, `No payment record found for Checkout Session: ${sessionId}`);
   }
 
   if (payment.status === PaymentStatus.COMPLETED) {
@@ -101,50 +95,21 @@ const handleStripeWebhookSuccess = async (paymentIntentId: string) => {
   }
 
   const updatedPayment = await prisma.payment.update({
-    where: { transactionId: paymentIntentId },
+    where: { transactionId: sessionId },
     data: {
       status: PaymentStatus.COMPLETED,
       paidAt: new Date(),
     },
   });
 
-  await prisma.rentalRequest.update({
+  const rentalRequest = await prisma.rentalRequest.update({
     where: { id: payment.rentalRequestId },
     data: { status: RequestStatus.ACTIVE },
   });
 
-  return updatedPayment;
-};
-
-const confirmPayment = async (tenantId: string, payload: { transactionId: string }) => {
-  const payment = await prisma.payment.findUnique({
-    where: { transactionId: payload.transactionId },
-    include: { rentalRequest: true },
-  });
-
-  if (!payment) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Payment record not found');
-  }
-
-  if (payment.rentalRequest.tenantId !== tenantId) {
-    throw new AppError(httpStatus.FORBIDDEN, 'You are not authorized to confirm this payment');
-  }
-
-  if (payment.status === PaymentStatus.COMPLETED) {
-    throw new AppError(httpStatus.CONFLICT, 'Payment is already completed');
-  }
-
-  const updatedPayment = await prisma.payment.update({
-    where: { transactionId: payload.transactionId },
-    data: {
-      status: PaymentStatus.COMPLETED,
-      paidAt: new Date(),
-    },
-  });
-
-  await prisma.rentalRequest.update({
-    where: { id: payment.rentalRequestId },
-    data: { status: RequestStatus.ACTIVE },
+  await prisma.property.update({
+    where: { id: rentalRequest.propertyId },
+    data: { isAvailable: false },
   });
 
   return updatedPayment;
@@ -187,7 +152,6 @@ const getPaymentById = async (id: string, userId: string) => {
 
 export const PaymentService = {
   createPayment,
-  confirmPayment,
   handleStripeWebhookSuccess,
   getMyPayments,
   getPaymentById,

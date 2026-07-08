@@ -1,7 +1,7 @@
 import httpStatus from 'http-status';
 import AppError from '../../utils/AppError';
 import prisma from '../../lib/prisma';
-import { UserStatus } from '../../../generated/prisma';
+import { Role, UserStatus } from '../../../generated/prisma';
 
 const updateProfile = async (id: string, payload: any) => {
   const result = await prisma.user.update({
@@ -17,6 +17,11 @@ const updateProfile = async (id: string, payload: any) => {
 
 const getAllUsers = async () => {
   const result = await prisma.user.findMany({
+    where: {
+      role: {
+        not: Role.ADMIN,
+      },
+    },
     select: {
       id: true,
       name: true,

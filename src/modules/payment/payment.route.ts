@@ -9,7 +9,7 @@ const router = express.Router();
 
 router.post('/webhook', express.raw({ type: 'application/json' }), PaymentController.stripeWebhook);
 
-router.get('/success', PaymentController.paymentSuccess);
+router.get('/confirm', PaymentController.paymentSuccess);
 router.get('/cancel', PaymentController.paymentCancel);
 
 router.post(

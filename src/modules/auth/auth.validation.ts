@@ -7,7 +7,7 @@ const registerValidationSchema = z.object({
     password: z.string({ message: 'Password is required' }).min(6, 'Password must be at least 6 characters'),
     phone: z.string({ message: 'Phone number is required' }),
     address: z.string({ message: 'Address is required' }),
-    role: z.enum(['ADMIN', 'LANDLORD', 'TENANT']).optional(),
+    role: z.enum(['LANDLORD', 'TENANT']).optional(),
   }),
 });
 
