@@ -2,6 +2,7 @@ import httpStatus from 'http-status';
 import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../utils/sendResponse';
 import { PropertyService } from './property.service';
+import AppError from '../../utils/AppError';
 
 const createProperty = catchAsync(async (req, res) => {
   const result = await PropertyService.createProperty(req.user.id, req.body);
@@ -47,6 +48,10 @@ const getAllProperties = catchAsync(async (req, res) => {
 const getPropertyById = catchAsync(async (req, res) => {
   const { id } = req.params;
   const result = await PropertyService.getPropertyById(id as string);
+
+  if (!result) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Property not found');
+  }
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
